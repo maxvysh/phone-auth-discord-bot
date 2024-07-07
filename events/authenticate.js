@@ -12,7 +12,7 @@ module.exports = {
     }
 
     // Send a welcome message to the general channel
-    generalChannel.send(`Welcome to the server, ${member.user}!`);
+    generalChannel.send(`${process.env.welcomeMessage} ${member.user}!`);
 
     // Then send a private message to the member
     let dmChannel = member.dmChannel;
@@ -27,14 +27,45 @@ module.exports = {
     const filter = (message) => message.author.id === member.id;
     const collector = dmChannel.createMessageCollector({
       filter,
-      time: 1000, // 5 min
+      time: process.env.countdown, // 5 min
     });
 
     collector.on("collect", async (message) => {
-      console.log("user responded");
-      await member.roles.add(process.env.roleId);
+      // Check if the guild is available
+      if (!guild) {
+        console.error("Guild not found!");
+        return message.reply(
+          "Sorry we are experiencing an error verifying you, try again later."
+        );
+      }
+
+      // Check if the role is available
+      if (!guild.roles.cache.has(process.env.roleId)) {
+        console.error("Role not found!");
+        return message.reply(
+          "Sorry we are experiencing an error verifying you, try again later."
+        );
+      }
+
+      // Check if the member is part of the guild
+      if (!member) {
+        return message.reply("You are not a member of the guild.");
+      }
+
+      // Check if the member already has the role
+      if (member.roles.cache.has(process.env.roleId)) {
+        return message.reply("You are already verified.");
+      }
+
+      await member.roles
+        .add(process.env.roleId)
+        .catch(
+          message.reply(
+            "Sorry we are experiencing an error verifying you, try again later."
+          )
+        );
       message.reply("You are now verified and have the 'cool' role!");
-      collector.stop("User has been verified and has the 'cool' role");
+      collector.stop("User has been verified");
     });
 
     collector.on("end", (collected, reason) => {
