@@ -1,4 +1,5 @@
 const { Events } = require("discord.js");
+const User = require("../models/user");
 
 module.exports = {
   name: Events.GuildMemberAdd,
@@ -20,7 +21,7 @@ module.exports = {
       dmChannel = await member.createDM(); // Ensure DM channel exists
     }
     dmChannel.send(
-      `Please verify by responding to this message with your phone number`
+      process.env.verifyMessage
     );
 
     // Once the user responds to the private message, give them the 'cool' role
@@ -49,7 +50,7 @@ module.exports = {
 
       // Check if the member is part of the guild
       if (!member) {
-        return message.reply("You are not a member of the guild.");
+        return message.reply("You are not a member of the server.");
       }
 
       // Check if the member already has the role
@@ -57,21 +58,19 @@ module.exports = {
         return message.reply("You are already verified.");
       }
 
-      await member.roles
-        .add(process.env.roleId)
-        .catch(
-          message.reply(
-            "Sorry we are experiencing an error verifying you, try again later."
-          )
-        );
-      message.reply("You are now verified and have the 'cool' role!");
+      await member.roles.add(process.env.roleId);
+      message.reply(process.env.verifySuccess);
+      User.create({
+        username: member.user.username,
+        phonenumber: message.content,
+      }).catch((err) => console.log('error creating user', err));
       collector.stop("User has been verified");
     });
 
     collector.on("end", (collected, reason) => {
       if (reason === "time") {
         dmChannel.send(
-          "The verification period has expired. Please dm me 'verify' to start over."
+          process.env.verifyExpired
         );
       }
     });
